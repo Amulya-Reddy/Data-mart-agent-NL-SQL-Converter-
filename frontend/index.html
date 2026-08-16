@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Mart Insights Agent</title>
+<style>
+  :root {
+    --paper: #f2ede1;
+    --paper-raised: #ece5d4;
+    --ink: #2a2420;
+    --ink-soft: #5c5347;
+    --rule: #d8cdb6;
+    --gold: #a9762c;
+    --gold-deep: #7d5720;
+    --green: #4c6b4f;
+    --red: #a3402f;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    min-height: 100vh;
+  }
+
+  .mono {
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  }
+
+  header {
+    border-bottom: 2px solid var(--ink);
+    padding: 28px 32px 18px;
+    background: var(--paper);
+  }
+
+  header .masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  header h1 {
+    font-size: 1.9rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin: 0;
+  }
+
+  header h1 .accent { color: var(--gold-deep); font-style: italic; }
+
+  header .tagline {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    font-style: italic;
+    letter-spacing: 0.02em;
+  }
+
+  header .meta-row {
+    max-width: 900px;
+    margin: 10px auto 0;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+
+  #statusDot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ink-soft);
+    display: inline-block;
+  }
+  #statusDot.ok { background: var(--green); }
+  #statusDot.err { background: var(--red); }
+
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 28px 32px 80px;
+  }
+
+  .section-label {
+    font-family: "SF Mono", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  .favorites-section {
+    border: 1px solid var(--rule);
+    background: var(--paper-raised);
+    border-radius: 4px;
+    padding: 14px 16px 16px;
+    margin-bottom: 32px;
+  }
+  .favorites-section .section-label { margin-bottom: 10px; }
+
+  .qa-section {
+    border-top: 2px solid var(--ink);
+    padding-top: 20px;
+  }
+  .qa-section .section-label { margin-bottom: 16px; }
+
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .example-chip {
+    font-family: inherit;
+    font-size: 0.78rem;
+    color: var(--gold-deep);
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    padding: 7px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .example-chip:hover {
+    background: #e4d9bd;
+    border-color: var(--gold);
+  }
+
+  #chat {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .turn {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 22px;
+  }
+
+  .turn-label {
+    font-family: "SF Mono", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .turn.user .turn-label::before { content: "Question"; }
+  .turn.agent .turn-label::before { content: "Answer"; }
+
+  .turn-body {
+    font-size: 1.02rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+
+  .turn.user .turn-body {
+    font-style: italic;
+    color: var(--ink);
+  }
+
+  .turn-body-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .fav-btn {
+    flex: none;
+    font-family: inherit;
+    font-size: 1.05rem;
+    line-height: 1;
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    padding: 2px 2px;
+  }
+  .fav-btn:hover { color: var(--gold-deep); }
+  .fav-btn.active { color: var(--gold-deep); }
+
+  .receipt {
+    margin-top: 14px;
+    border: 1px solid var(--rule);
+    background: var(--paper-raised);
+    border-radius: 4px;
+  }
+
+  .receipt summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-family: "SF Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .receipt summary::-webkit-details-marker { display: none; }
+  .receipt summary::before {
+    content: "▸";
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  .receipt[open] summary::before { transform: rotate(90deg); }
+
+  .receipt-body {
+    padding: 4px 14px 14px;
+  }
+
+  .query-card {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--gold);
+    border-radius: 2px;
+  }
+  .query-card.err { border-left-color: var(--red); }
+
+  .query-card pre {
+    margin: 0 0 6px;
+    font-family: "SF Mono", monospace;
+    font-size: 0.78rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--ink);
+  }
+
+  .query-meta {
+    font-family: "SF Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 10px;
+  }
+
+  .empty-state {
+    color: var(--ink-soft);
+    font-style: italic;
+    font-size: 0.95rem;
+    padding: 30px 0;
+    text-align: center;
+  }
+
+  .thinking {
+    color: var(--ink-soft);
+    font-style: italic;
+    font-size: 0.92rem;
+  }
+  .thinking::after {
+    content: "";
+    animation: dots 1.4s infinite;
+  }
+  @keyframes dots {
+    0% { content: ""; }
+    33% { content: "."; }
+    66% { content: ".."; }
+    100% { content: "..."; }
+  }
+
+  form#askForm {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, var(--paper) 70%, transparent);
+    padding: 20px 0 4px;
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  #questionInput {
+    flex: 1;
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 12px 14px;
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    background: #fffdf8;
+    color: var(--ink);
+  }
+  #questionInput:focus {
+    outline: none;
+    border-color: var(--gold-deep);
+    box-shadow: 0 0 0 3px rgba(169, 118, 44, 0.15);
+  }
+
+  button[type="submit"] {
+    font-family: "SF Mono", monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 0 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button[type="submit"]:hover { background: var(--gold-deep); }
+  button[type="submit"]:disabled {
+    background: var(--rule);
+    color: var(--ink-soft);
+    cursor: not-allowed;
+  }
+
+  .mocked-banner {
+    font-size: 0.72rem;
+    color: var(--gold-deep);
+    background: #f7edd6;
+    border: 1px solid var(--gold);
+    border-radius: 3px;
+    padding: 4px 10px;
+    display: inline-block;
+    margin-top: 6px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1c1a17;
+      --paper-raised: #262320;
+      --ink: #eae3d3;
+      --ink-soft: #a89e8b;
+      --rule: #3c362e;
+      --gold: #d4a24e;
+      --gold-deep: #e0b263;
+      --green: #7fa382;
+      --red: #d17862;
+    }
+    #questionInput { background: #201d19; }
+    button[type="submit"] { color: #1c1a17; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="masthead">
+    <h1>Data Mart <span class="accent">Insights</span> Agent</h1>
+  </div>
+  <div class="meta-row">
+    <span><span id="statusDot"></span> <span id="statusText">checking backend&hellip;</span></span>
+  </div>
+</header>
+
+<main>
+  <section class="favorites-section">
+    <div class="section-label">Favorites</div>
+    <div class="examples" id="examples"></div>
+  </section>
+
+  <section class="qa-section">
+    <div class="section-label">Questions &amp; Answers</div>
+    <div id="chat">
+      <div class="empty-state">Ask a question about the anesthesia billing data mart to get started.</div>
+    </div>
+
+    <form id="askForm">
+      <input type="text" id="questionInput" placeholder="e.g. Which facility has the most cancelled surgeries?" autocomplete="off" />
+      <button type="submit" id="askButton">Ask</button>
+    </form>
+  </section>
+</main>
+
+<script>
+  window.MART_API_BASE = window.MART_API_BASE || "http://localhost:8000";
+
+  const chat = document.getElementById("chat");
+  const form = document.getElementById("askForm");
+  const input = document.getElementById("questionInput");
+  const askButton = document.getElementById("askButton");
+  const statusDot = document.getElementById("statusDot");
+  const statusText = document.getElementById("statusText");
+
+  let emptyStateEl = chat.querySelector(".empty-state");
+
+  const FAVORITES_KEY = "ncap_favorites";
+  const DEFAULT_FAVORITES = [
+    "What is our claim denial rate by payer?",
+    "What is the average time from claim submission to payment?",
+    "Which procedures generate the highest average charge?",
+    "How many cases are currently unbilled or have an outstanding balance?",
+  ];
+
+  function loadFavorites() {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* fall through to defaults */ }
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(DEFAULT_FAVORITES));
+    return DEFAULT_FAVORITES.slice();
+  }
+
+  let favorites = loadFavorites();
+
+  function isFavorite(q) {
+    return favorites.includes(q);
+  }
+
+  function toggleFavorite(q) {
+    if (isFavorite(q)) {
+      favorites = favorites.filter((f) => f !== q);
+    } else {
+      favorites.push(q);
+    }
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+    renderFavorites();
+  }
+
+  function renderFavorites() {
+    const container = document.getElementById("examples");
+    container.innerHTML = favorites
+      .map((q) => `<button class="example-chip" data-q="${escapeHtml(q)}">${escapeHtml(q)}</button>`)
+      .join("");
+  }
+
+  function clearEmptyState() {
+    if (emptyStateEl) {
+      emptyStateEl.remove();
+      emptyStateEl = null;
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function checkHealth() {
+    try {
+      const res = await fetch(window.MART_API_BASE + "/api/health");
+      if (!res.ok) throw new Error("bad status");
+      const data = await res.json();
+      statusDot.className = "ok";
+      statusText.textContent = `connected — data source: ${data.data_source}${data.mocked ? " (mocked, no API key)" : ""}`;
+    } catch (e) {
+      statusDot.className = "err";
+      statusText.textContent = `cannot reach backend at ${window.MART_API_BASE}`;
+    }
+  }
+
+  function addUserTurn(question) {
+    clearEmptyState();
+    const el = document.createElement("div");
+    el.className = "turn user";
+    const fav = isFavorite(question);
+    el.innerHTML = `
+      <div class="turn-label"></div>
+      <div class="turn-body-row">
+        <div class="turn-body">${escapeHtml(question)}</div>
+        <button class="fav-btn ${fav ? 'active' : ''}" data-q="${escapeHtml(question)}" title="${fav ? 'Remove from Favorites' : 'Save to Favorites'}">${fav ? '★' : '☆'}</button>
+      </div>
+    `;
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+
+  function addThinkingTurn() {
+    const el = document.createElement("div");
+    el.className = "turn agent";
+    el.innerHTML = `<div class="turn-label"></div><div class="turn-body thinking">Thinking</div>`;
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+
+  function renderQueries(queries) {
+    if (!queries || queries.length === 0) {
+      return `<div class="receipt-body"><em>No SQL queries were run for this answer.</em></div>`;
+    }
+    return `<div class="receipt-body">` + queries.map(q => `
+      <div class="query-card ${q.mocked ? 'err' : ''}">
+        <pre class="mono">${escapeHtml(q.sql || "")}</pre>
+        <div class="query-meta">
+          <span>${q.row_count} row${q.row_count === 1 ? '' : 's'}</span>
+          ${q.truncated ? '<span>truncated</span>' : ''}
+          ${q.mocked ? '<span>mocked</span>' : ''}
+        </div>
+      </div>
+    `).join("") + `</div>`;
+  }
+
+  function renderAgentTurn(el, data) {
+    const queryCount = (data.queries || []).length;
+    el.innerHTML = `
+      <div class="turn-label"></div>
+      <div class="turn-body">${escapeHtml(data.answer)}</div>
+      ${data.mocked ? '<div class="mocked-banner">mocked response — no ANTHROPIC_API_KEY set on the backend</div>' : ''}
+      <details class="receipt">
+        <summary>Receipt &mdash; ${queryCount} quer${queryCount === 1 ? 'y' : 'ies'} run</summary>
+        ${renderQueries(data.queries)}
+      </details>
+    `;
+  }
+
+  async function ask(question) {
+    if (!question.trim()) return;
+    addUserTurn(question);
+    const agentEl = addThinkingTurn();
+    askButton.disabled = true;
+
+    try {
+      const res = await fetch(window.MART_API_BASE + "/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Server returned ${res.status}: ${text}`);
+      }
+      const data = await res.json();
+      renderAgentTurn(agentEl, data);
+    } catch (e) {
+      agentEl.innerHTML = `<div class="turn-label"></div><div class="turn-body">Error reaching the backend: ${escapeHtml(e.message)}</div>`;
+    } finally {
+      askButton.disabled = false;
+      chat.scrollTop = chat.scrollHeight;
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = input.value;
+    input.value = "";
+    ask(q);
+  });
+
+  document.getElementById("examples").addEventListener("click", (e) => {
+    const btn = e.target.closest(".example-chip");
+    if (!btn) return;
+    ask(btn.dataset.q);
+  });
+
+  chat.addEventListener("click", (e) => {
+    const btn = e.target.closest(".fav-btn");
+    if (!btn) return;
+    const q = btn.dataset.q;
+    toggleFavorite(q);
+    const fav = isFavorite(q);
+    btn.textContent = fav ? "★" : "☆";
+    btn.classList.toggle("active", fav);
+    btn.title = fav ? "Remove from Favorites" : "Save to Favorites";
+  });
+
+  renderFavorites();
+  checkHealth();
+</script>
+</body>
+</html>
