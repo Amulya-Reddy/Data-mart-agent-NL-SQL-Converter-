@@ -374,7 +374,11 @@
 </main>
 
 <script>
-  window.MART_API_BASE = window.MART_API_BASE || "http://localhost:8000";
+  window.MART_API_BASE = window.MART_API_BASE || (
+    ["localhost", "127.0.0.1", ""].includes(window.location.hostname)
+      ? "http://localhost:8000"
+      : "https://data-mart-insights-agent.onrender.com"
+  );
 
   const chat = document.getElementById("chat");
   const form = document.getElementById("askForm");
