@@ -1,4 +1,5 @@
-# NCAP Data Mart Agent (prototype)
+# Data Mart Agent: NL - SQL- Converter Agent
+
 
 A natural-language query agent for an anesthesia billing/reconciliation data
 mart. Type a question in plain English, and Claude answers it by writing and
